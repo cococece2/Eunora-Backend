@@ -8,6 +8,7 @@ import { roomsRouter } from './routes/rooms.js'
 import { messagesRouter } from './routes/messages.js'
 import { lettersRouter } from './routes/letters.js'
 import { adminRouter } from './routes/admin.js'
+import { adminUiRouter } from './routes/adminUi.js'
 
 export function createApp() {
   const app = express()
@@ -24,6 +25,7 @@ export function createApp() {
   app.use('/rooms', roomsRouter)
   app.use('/messages', messagesRouter)
   app.use('/letters', lettersRouter)
+  app.use('/admin-ui', adminUiRouter)
   app.use('/admin', adminRouter)
 
   app.use(notFound)
