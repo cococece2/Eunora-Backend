@@ -15,6 +15,7 @@ export const toLetter = (r: any) => ({
   body: r.body as string,
   createdAt: r.created_at as string,
   ...(r.approved !== undefined && { approved: r.approved as boolean }),
+  ...(r.status !== undefined && { status: r.status as string, reviewNote: r.review_note ?? null, reviewedAt: r.reviewed_at ?? null }),
 })
 
 /** GET /letters?limit=12 → { letters: [...] }  approved letters only, newest first */
@@ -22,7 +23,7 @@ lettersRouter.get('/', async (req, res) => {
   const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(50).default(12) }).parse(req.query)
   const { data, error } = await anon.from('letters')
     .select('id,body,created_at,profiles(sailor_name)')
-    .eq('approved', true)
+    .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw error

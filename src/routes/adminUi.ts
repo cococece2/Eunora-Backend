@@ -36,7 +36,7 @@ const PAGE = `<!doctype html>
   • No real names, schools, places or contact details<br>
   • If the writer sounds like they are in danger right now, do not publish. Delete it, and consider how you could reach out through the site's help resources.</div>
 <div id="status"></div>
-<div class="row tabs" style="margin:16px 0"><button data-t="pending" class="on">Pending letters</button><button data-t="approved">Published letters</button><button data-t="hidden">Hidden messages</button></div>
+<div class="row tabs" style="margin:16px 0"><button data-t="pending" class="on">Pending letters</button><button data-t="approved">Published letters</button><button data-t="rejected">Rejected letters</button><button data-t="hidden">Hidden messages</button></div>
 <div id="list"></div>
 </main><script>
 (function(){
@@ -62,8 +62,8 @@ const PAGE = `<!doctype html>
         c.appendChild(el('div','meta','From '+(it.sailor||it.sailorName||'a sailor')+' · '+when(it.createdAt||it.created_at)+' · letter #'+it.id));
         c.appendChild(el('p','body',it.body||it.text||''));
         var r=el('div','row');
-        if(!it.approved)r.appendChild(btn('Publish','good',function(){act(api('POST','/admin/letters/'+it.id+'/approve'),'Published.')}));
-        r.appendChild(btn(it.approved?'Unpublish and delete':'Reject and delete','bad',function(){if(confirm('Delete this letter for good?'))act(api('DELETE','/admin/letters/'+it.id),'Deleted.')}));
+        if(it.status!=='approved')r.appendChild(btn('Publish','good',function(){act(api('POST','/admin/letters/'+it.id+'/approve'),'Published. The writer will be told.')}));
+        if(it.status!=='rejected')r.appendChild(btn(it.status==='approved'?'Unpublish':'Reject','bad',function(){act(api('POST','/admin/letters/'+it.id+'/reject'),'Rejected. The writer will be told.')}));
         c.appendChild(r)
       } else {
         c.appendChild(el('div','meta','Hidden message #'+it.id+' · '+(it.reports||0)+' report(s) · '+when(it.createdAt||it.created_at)));

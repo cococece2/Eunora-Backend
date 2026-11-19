@@ -76,11 +76,14 @@ es.addEventListener('message', e => console.log(JSON.parse(e.data)))
 | POST 🔒 | `/letters` | `{ body }` (50–1500 chars) | `202 { status: "pending" }` — max 3/day (`429 daily_limit`) |
 
 ### Admin (moderation)
+The main way to review letters is the admin login on the website at `/#/admin` (accounts listed in the `admins` table, see `db/03-letter-review.sql`). These endpoints do the same with an API key.
+
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET 🛡️ | `/admin/letters?status=pending\|approved\|all` | — | `{ letters }` |
-| POST 🛡️ | `/admin/letters/:id/approve` | — | `{ letter }` |
-| DELETE 🛡️ | `/admin/letters/:id` | — | `204` (reject) |
+| GET 🛡️ | `/admin/letters?status=pending\|approved\|rejected\|all` | — | `{ letters }` |
+| POST 🛡️ | `/admin/letters/:id/approve` | `{ note? }` | `{ letter }` — writer is notified |
+| POST 🛡️ | `/admin/letters/:id/reject` | `{ note? }` | `{ letter }` — writer is notified |
+| DELETE 🛡️ | `/admin/letters/:id` | — | `204` (deletes for good, no notice) |
 | GET 🛡️ | `/admin/messages/hidden` | — | `{ messages }` with `reports` count |
 | POST 🛡️ | `/admin/messages/:id/hide` | — | `204` |
 | POST 🛡️ | `/admin/messages/:id/unhide` | — | `204` (also clears reports) |

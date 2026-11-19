@@ -16,27 +16,42 @@ const numericId = z.coerce.number().int().positive()
 
 // ── Letters ──────────────────────────────────────────────────────────────────
 
-/** GET /admin/letters?status=pending|approved|all → { letters } */
+const LETTER_COLS = 'id,body,status,approved,review_note,reviewed_at,created_at,profiles(sailor_name)'
+
+/** GET /admin/letters?status=pending|approved|rejected|all → { letters } */
 adminRouter.get('/letters', async (req, res) => {
-  const { status } = z.object({ status: z.enum(['pending', 'approved', 'all']).default('pending') }).parse(req.query)
-  let query = db().from('letters').select('id,body,approved,created_at,profiles(sailor_name)').order('created_at', { ascending: false })
-  if (status !== 'all') query = query.eq('approved', status === 'approved')
+  const { status } = z.object({ status: z.enum(['pending', 'approved', 'rejected', 'all']).default('pending') }).parse(req.query)
+  let query = db().from('letters').select(LETTER_COLS).order('created_at', { ascending: false })
+  if (status !== 'all') query = query.eq('status', status)
   const { data, error } = await query
   if (error) throw error
   res.json({ letters: (data ?? []).map(toLetter) })
 })
 
-/** POST /admin/letters/:id/approve → { letter }  publishes it */
-adminRouter.post('/letters/:id/approve', async (req, res) => {
-  const id = numericId.parse(req.params.id)
-  const { data, error } = await db().from('letters').update({ approved: true }).eq('id', id)
-    .select('id,body,approved,created_at,profiles(sailor_name)').maybeSingle()
+/** Sets a letter's review decision and flags it so the writer sees a notice next time they log in. */
+async function review(id: number, status: 'approved' | 'rejected', note?: string) {
+  const { data, error } = await db().from('letters')
+    .update({ status, review_note: note?.trim() || null, reviewed_at: new Date().toISOString(), author_seen: false })
+    .eq('id', id).select(LETTER_COLS).maybeSingle()
   if (error) throw error
   if (!data) throw new HttpError(404, 'No letter with that id.')
-  res.json({ letter: toLetter(data) })
+  return toLetter(data)
+}
+const noteBody = z.object({ note: z.string().max(500).optional() }).default({})
+
+/** POST /admin/letters/:id/approve  { note? } → { letter }  publishes it */
+adminRouter.post('/letters/:id/approve', async (req, res) => {
+  const { note } = noteBody.parse(req.body ?? {})
+  res.json({ letter: await review(numericId.parse(req.params.id), 'approved', note) })
 })
 
-/** DELETE /admin/letters/:id → 204  rejects (deletes) it */
+/** POST /admin/letters/:id/reject  { note? } → { letter }  keeps it private; the writer is told */
+adminRouter.post('/letters/:id/reject', async (req, res) => {
+  const { note } = noteBody.parse(req.body ?? {})
+  res.json({ letter: await review(numericId.parse(req.params.id), 'rejected', note) })
+})
+
+/** DELETE /admin/letters/:id → 204  deletes it for good (the writer is NOT told; prefer /reject) */
 adminRouter.delete('/letters/:id', async (req, res) => {
   const id = numericId.parse(req.params.id)
   const { error } = await db().from('letters').delete().eq('id', id)
